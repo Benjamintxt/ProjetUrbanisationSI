@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 # Kafka configuration
 kafka_config = {
-    'bootstrap.servers': 'localhost:9092',  # Replace with your Kafka broker address
+    'bootstrap.servers': 'localhost:9092',
     'client.id': 'flask-kafka-producer'
 }
 

@@ -34,7 +34,7 @@ def make_post_request(url, data, secret):
 if __name__ == "__main__":
     # Create a command line argument parser
     parser = argparse.ArgumentParser(description="HTTP POST Request with JSON Body")
-    parser.add_argument("url", type=str, help="URL to send the POST request to (e.g., http://127.0.0.1:8000/api/webhook/)")
+    parser.add_argument("url", type=str, help="URL to send the POST request to (e.g., http://127.0.0.1:5000/webhook/)")
     parser.add_argument("secret", nargs='?', type=str, help="Secret shared between your server and petzi simulator", default="secret")
 
     # Parse the command line arguments

@@ -1,0 +1,39 @@
+{
+  "event": "ticket_created",
+  "details": {
+    "ticket": {
+      "number": "XXXX2941J6SY",
+      "type": "online_presale",
+      "title": "My Parent Ticket",
+      "category": "My Category",
+      "eventId": 12345,
+      "event": "Event name",
+      "cancellationReason": "",
+      "sessions": [
+        {
+          "name": "Session name",
+          "date": "2023-04-28",
+          "time": "19:00:00",
+          "doors": "20:00:00",
+          "location": {
+            "name": "location",
+            "street": "2960 Curtis Course Suite 823",
+            "city": "East Monicaborough",
+            "postcode": "84458"
+          }
+        }
+      ],
+      "promoter": "Member name",
+      "price": {
+        "amount": "10.00",
+        "currency": "CHF"
+      }
+    },
+    "buyer": {
+      "role": "customer",
+      "firstName": "Jane",
+      "lastName": "Doe",
+      "postcode": "1234"
+    }
+  }
+}

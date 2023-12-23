@@ -11,12 +11,15 @@ import hmac
 import requests
 
 def make_header(body, secret):
-    unix_timestamp = str(datetime.datetime.timestamp(datetime.datetime.now())).split('.')[0]
+    unix_timestamp = str(int(datetime.datetime.timestamp(datetime.datetime.now())))
     body_to_sign = f'{unix_timestamp}.{body}'.encode()
     digest = hmac.new(secret.encode(), body_to_sign, "sha256").hexdigest()
-    # Set the headers for the POST request
-    headers = {'Petzi-Signature': f't={unix_timestamp},v1={digest}', 'Petzi-Version': '2',
-               'Content-Type': 'application/json', 'User-Agent': 'PETZI webhook'}
+    headers = {
+        'Petzi-Signature': f't={unix_timestamp},v1={digest}',
+        'Petzi-Version': '2',
+        'Content-Type': 'application/json',
+        'User-Agent': 'PETZI webhook'
+    }
     return headers
 
 def make_post_request(url, data, secret):

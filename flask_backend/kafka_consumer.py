@@ -1,3 +1,4 @@
+import json
 from confluent_kafka import Consumer, KafkaError
 
 # Kafka configuration for consuming messages
@@ -25,5 +26,18 @@ while True:
             print(msg.error())
             break
 
-    # Process the message (store it, print it, etc.)
-    print('Received message: {}'.format(msg.value().decode('utf-8')))
+    try:
+        # Decode JSON data
+        json_data = json.loads(msg.value().decode('utf-8'))
+
+        # Extract eventId
+        event_id = json_data.get('eventId')
+
+        # Process the message (store it, print it, etc.)
+        print(f'Received message: eventId={event_id}, data={json_data}')
+
+        # Store or process the JSON data and eventId as needed
+        # Example: store_data_in_database(event_id, json_data)
+
+    except json.JSONDecodeError as e:
+        print(f"Error decoding JSON: {e}")

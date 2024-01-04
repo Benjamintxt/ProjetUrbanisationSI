@@ -39,7 +39,6 @@ export default {
     this.fetchEvents();
     // Listen for real-time events from WebSocket
     socket.on('webhook_events', (data) => {
-      console.log('Received event:', data);
       this.events.push(data);
     });
   },

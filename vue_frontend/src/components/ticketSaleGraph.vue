@@ -10,7 +10,6 @@
       <div>
         <label for="timeframeSelector">Select Timeframe: </label>
         <select id="timeframeSelector" v-model="selectedTimeframe" @change="updateChart">
-          <option value="weekly">Weekly</option>
           <option value="daily">Daily</option>
           <option value="hour">Hourly</option>
           <option value="minute">Minute</option>
@@ -29,7 +28,7 @@
     data() {
         return {
         selectedEvent: null,
-        selectedTimeframe: 'weekly',
+        selectedTimeframe: 'daily',
         options: {
             theme: 'light2',
             animationEnabled: true,
@@ -57,9 +56,10 @@
 
         this.socket.on('webhook_events', (data) => {
             console.log('Received event:', data);
-            if (this.updateChartRealTime) {
+            this.chartInstance.render();
+            /*if (this.updateChartRealTime) {
                 this.updateChartRealTime();
-            }
+            }*/
         });
         this.fetchEventSalesCount();
     },
@@ -98,40 +98,19 @@
             }
         },
 
-        getFormattedDate(date) {
-        const options = { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' };
-        return new Intl.DateTimeFormat('en-US', options).format(date);
-        },
-
-        getWeekStartDate(date) {
-        const weekStartDate = new Date(date);
-        weekStartDate.setDate(date.getDate() - date.getDay());
-        return this.formatDate(weekStartDate);
-        },
-
-        groupSalesDataByWeek(salesData) {
-            const grouped = {};
-
-            salesData.forEach((sale) => {
-                const key = this.getWeekStartDate(new Date(sale.timestamp));
-                if (!grouped[key]) {
-                grouped[key] = 0;
-                }
-                grouped[key]++;
-            });
-
-            return grouped;
-        },
-
         groupSalesDataByDay(salesData) {
             const grouped = {};
 
             salesData.forEach((sale) => {
-                const key = this.formatDate(new Date(sale.timestamp), 'daily');
+                const date = new Date(sale);
+
+                const key = this.formatDateForDaily(date);
+
                 if (!grouped[key]) {
-                grouped[key] = 0;
+                    grouped[key] = 0;
                 }
-                grouped[key]++;
+
+                grouped[key] ++;
             });
 
             return grouped;
@@ -168,8 +147,6 @@
 
         groupSalesDataByTimeframe(salesData, timeframe) {
         switch (timeframe) {
-            case 'weekly':
-            return this.groupSalesDataByWeek(salesData);
             case 'daily':
             return this.groupSalesDataByDay(salesData);
             case 'hour':
@@ -182,53 +159,48 @@
         },
 
         updateChartData() {
-        let dataPoints;
+            let dataPoints;
 
-        try {
-            let groupedSalesData = this.groupSalesDataByTimeframe(this.salesData, this.selectedTimeframe);
+            try {
+                let groupedSalesData = this.groupSalesDataByTimeframe(this.salesData, this.selectedTimeframe);
 
-            console.log('Grouped Sales Data:', groupedSalesData);
+                switch (this.selectedTimeframe) {
+                    case 'daily':
+                        dataPoints = this.getLastNDaysDataPoints(groupedSalesData, 7);
+                        break;
+                    case 'hour':
+                        dataPoints = this.getLastNHoursDataPoints(groupedSalesData, 24);
+                        break;
+                    case 'minute':
+                        dataPoints = this.getLastNMinutesDataPoints(groupedSalesData, 60);
+                        break;
+                    default:
+                        dataPoints = [];
+                }
 
-            switch (this.selectedTimeframe) {
-            case 'weekly':
-                dataPoints = this.getLastNWeeksDataPoints(groupedSalesData, 6);
-                break;
-            case 'daily':
-                dataPoints = this.getLastNDaysDataPoints(groupedSalesData, 14);
-                break;
-            case 'hour':
-                dataPoints = this.getLastNHoursDataPoints(groupedSalesData, 24);
-                break;
-            case 'minute':
-                dataPoints = this.getLastNMinutesDataPoints(groupedSalesData, 60);
-                break;
-            default:
-                dataPoints = [];
+                //console.log('Data Points:', dataPoints);
+            } catch (error) {
+                console.error('Error processing sales data:', error);
+                return;
             }
 
-            console.log('Data Points:', dataPoints);
-        } catch (error) {
-            console.error('Error processing sales data:', error);
-            return;
-        }
+            this.options.data = [
+                {
+                    type: 'line',
+                    xValueFormatString: this.getXValueFormatString(),
+                    yValueFormatString: '0,0',
+                    markerSize: 0,
+                    dataPoints,
+                },
+            ];
 
-        this.options.data = [
-            {
-            type: 'line',
-            xValueFormatString: this.getXValueFormatString(),
-            yValueFormatString: '0,0',
-            markerSize: 0,
-            dataPoints,
-            },
-        ];
+            console.log('Updated Chart Data:', this.options.data);
 
-        console.log('Updated Chart Data:', this.options.data);
-
-        if (this.chart) {
-            this.chart.render();
-        } else {
-            console.error('Chart instance not found.');
-        }
+            if (this.chart) {
+                this.chart.render();
+            } else {
+                console.error('Chart instance not found.');
+            }
         },
 
         updateChart() {
@@ -249,6 +221,7 @@
             };
             
             fetchData();
+            
 
             if (this.updateChartRealTime) {
                 this.updateChartRealTime();
@@ -280,26 +253,16 @@
 
 
         getXValueFormatString() {
-        switch (this.selectedTimeframe) {
-            case 'weekly':
-            return 'MMM DD, YYYY';
-            case 'daily':
-            return 'MMM DD, YYYY';
-            case 'hour':
-            return 'MMM DD, YYYY HH:00';
-            case 'minute':
-            return 'MMM DD, YYYY HH:mm';
-            default:
-            return 'MMM DD, YYYY';
-        }
-        },
-
-        getLastNWeeksDataPoints(groupedSalesData, n) {
-        const endOfWeek = new Date();
-        const startOfWeek = new Date(endOfWeek);
-        startOfWeek.setDate(endOfWeek.getDate() - n * 7);
-
-        return this.generateDataPoints(startOfWeek, endOfWeek, 'weekly', groupedSalesData);
+            switch (this.selectedTimeframe) {
+                case 'daily':
+                return 'MMM DD, YYYY';
+                case 'hour':
+                return 'MMM DD, YYYY HH:00';
+                case 'minute':
+                return 'MMM DD, YYYY HH:mm';
+                default:
+                return 'MMM DD, YYYY';
+            }
         },
 
         getLastNDaysDataPoints(groupedSalesData, n) {
@@ -338,7 +301,7 @@
                 cumulativeCount += count;
 
                 dataPoints.push({
-                    x: currentDate,
+                    x: new Date(currentDate),
                     y: cumulativeCount,
                 });
 
@@ -350,30 +313,40 @@
 
 
         formatDate(date, timeframe) {
-        if (!date) {
-            return '';
-        }
-
-        switch (timeframe) {
-            case 'weekly':
-            return this.getWeekStartDate(date);
-            case 'daily':
-            return this.formatDate(date);
-            case 'hour':
-            return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':00';
-            case 'minute':
-            return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':' + this.pad(date.getMinutes());
-            default:
-            return '';
-        }
+            if (!date) {
+                return '';
+            }
+            
+            switch (timeframe) {
+                case 'daily':
+                return this.formatDateForDaily(date);
+                case 'hour':
+                return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':00';
+                case 'minute':
+                return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':' + this.pad(date.getMinutes());
+                default:
+                return '';
+            }
         },
+
+        formatDateForDaily(date) {
+            if (!date) {
+                return '';
+            }
+
+            if (typeof date === 'string') {
+                date = new Date(date);
+            }
+
+            const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+            return Intl.DateTimeFormat('en-US', options).format(date);
+        },
+
+
 
         decrementDate(date, timeframe) {
         const newDate = new Date(date);
         switch (timeframe) {
-            case 'weekly':
-            newDate.setDate(date.getDate() + 7);
-            break;
             case 'daily':
             newDate.setDate(date.getDate() + 1);
             break;

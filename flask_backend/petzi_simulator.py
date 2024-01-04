@@ -48,12 +48,12 @@ if __name__ == "__main__":
        "event":"ticket_created",
        "details":{
           "ticket":{
-             "number":"XXXU2941J7QW3P",
+             "number":"XXXYR0O1MNQM3P",
              "type":"online_presale",
              "title":"My Parent Ticket",
              "category":"My Category",
-             "eventId":123456,
-             "event":"Les Ardentes 2024",
+             "eventId":123451,
+             "event":"RIP Pop Smoke",
              "cancellationReason":"",
              "sessions":[
                 {

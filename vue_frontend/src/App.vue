@@ -1,42 +1,103 @@
-<script>
-import { Bar } from 'vue-chartjs'
-import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js'
-
-ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
-
-export default {
-  name: 'BarChart',
-  components: { Bar },
-  data() {
-    return {
-      chartData: {
-        labels: [ 'January', 'February', 'March'],
-        datasets: [
-          {
-            label: 'Dashboard',
-            backgroundColor: '#f87979',
-            data: [40, 20, 12]
-          }
-        ]
-      }
-    }
-  }
-}
-</script>
-
 <template>
-  <header>
-    <div class="chart"><Bar :data="chartData" /></div>
-  </header>
+  <div>
+    <h1>Ventes événements</h1>
+
+    <div v-if="selectedEventInfo">
+      <h2>{{ selectedEventInfo.eventName }}</h2>
+      <p>Total Sales: {{ selectedEventInfo.totalSales }}</p>
+    </div>
+
+    <TicketSaleGraph
+      :events="events"
+      :update-chart-real-time="updateChartRealTime"
+      :fetch-event-sales-count="fetchEventSalesCount"
+    />
+
+  </div>
 </template>
 
-<style>
-@import url('https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900');
-.chart {
-  width: 100%;
-  height: 100%;
-  max-width: 800px;
-  max-height: 600px;
-  margin: 0 auto;
-}
-</style>
+<script>
+import io from 'socket.io-client';
+import TicketSaleGraph from './components/ticketSaleGraph.vue';
+
+const socket = io('http://127.0.0.1:5000/');
+
+export default {
+  components: {
+    TicketSaleGraph,
+  },
+  data() {
+    return {
+      events: [],
+      eventSalesCount: null,
+      allEvents: [],
+      selectedEvent: null,
+      selectedEventInfo: null,
+    };
+  },
+  created() {
+    this.fetchEvents();
+    // Listen for real-time events from WebSocket
+    socket.on('webhook_events', (data) => {
+      console.log('Received event:', data);
+      this.events.push(data);
+    });
+  },
+  beforeUnmount() {
+    // Disconnect the WebSocket when the component is destroyed
+    socket.disconnect();
+  },
+  methods: {
+    async fetchEvents() {
+      try {
+        const response = await this.axios.get('http://127.0.0.1:5000/events');
+        console.log('Response:', response);
+        if (response && response.data) {
+          console.log('Events:', response.data.events);
+          this.events = response.data.events;
+        } else {
+          console.error('Invalid response structure:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+      }
+    },
+    async fetchEventSalesCount(eventId) {
+      try {
+        const response = await this.axios.get(`http://127.0.0.1:5000/event-sales-count/${eventId}`);
+        console.log('Event Sales Count Response:', response);
+        if (response && response.data) {
+          this.selectedEventInfo = {
+            eventName: response.data.eventName,
+            totalSales: response.data.totalSales,
+          };
+        } else {
+          console.error('Invalid event sales count response structure:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching event sales count:', error);
+      }
+    },
+    async fetchAllEvents() {
+      try {
+        const response = await this.axios.get('http://127.0.0.1:5000/events');
+        console.log('All Events Response:', response);
+        if (response && response.data) {
+          this.allEvents = response.data.events;
+        } else {
+          console.error('Invalid all events response structure:', response);
+        }
+      } catch (error) {
+        console.error('Error fetching all events:', error);
+      }
+    },
+    handleSelectedEventChange(eventId) {
+      this.selectedEvent = eventId;
+      this.fetchEventSalesCount(eventId);
+    },
+    updateChartRealTime() {
+      console.log('Updating chart in real-time');
+    },
+  },
+};
+</script>

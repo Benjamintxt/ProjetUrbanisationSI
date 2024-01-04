@@ -48,12 +48,12 @@ if __name__ == "__main__":
        "event":"ticket_created",
        "details":{
           "ticket":{
-             "number":"XXXX2941J6SY",
+             "number":"XXXU2941J7QW3P",
              "type":"online_presale",
              "title":"My Parent Ticket",
              "category":"My Category",
-             "eventId":12345,
-             "event":"Event name",
+             "eventId":123456,
+             "event":"Les Ardentes 2024",
              "cancellationReason":"",
              "sessions":[
                 {

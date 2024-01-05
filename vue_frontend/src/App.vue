@@ -9,7 +9,6 @@
 
     <TicketSaleGraph
       :events="events"
-      :update-chart-real-time="updateChartRealTime"
       :fetch-event-sales-count="fetchEventSalesCount"
     />
 
@@ -37,10 +36,6 @@ export default {
   },
   created() {
     this.fetchEvents();
-    // Listen for real-time events from WebSocket
-    socket.on('webhook_events', (data) => {
-      this.events.push(data);
-    });
   },
   beforeUnmount() {
     // Disconnect the WebSocket when the component is destroyed
@@ -93,9 +88,6 @@ export default {
     handleSelectedEventChange(eventId) {
       this.selectedEvent = eventId;
       this.fetchEventSalesCount(eventId);
-    },
-    updateChartRealTime() {
-      console.log('Updating chart in real-time');
     },
   },
 };

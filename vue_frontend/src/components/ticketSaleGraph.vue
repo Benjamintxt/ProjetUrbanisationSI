@@ -47,7 +47,6 @@
         },
         salesData: [],
         chart: null,
-        realTimeUpdatePending: false,
         selectedEventTotalSales: 0,
         };
     },
@@ -56,10 +55,13 @@
 
         this.socket.on('webhook_events', (data) => {
             console.log('Received event:', data);
-            this.chartInstance.render();
+            this.chart.render();
             /*if (this.updateChartRealTime) {
                 this.updateChartRealTime();
             }*/
+            this.fetchEventSalesCount();
+            //this.updateChartData();
+            this.updateChart();
         });
         this.fetchEventSalesCount();
     },
@@ -96,6 +98,52 @@
             } catch (error) {
                 console.error('Error fetching data:', error);
             }
+        },
+
+        filterSalesDataByTimeframe(groupedSalesData, timeframe) {
+            const filteredData = {};
+
+            const currentDate = new Date();
+            const startDate = new Date(currentDate);
+
+            // Adjust startDate based on the selected timeframe
+            switch (timeframe) {
+                case 'day':
+                    startDate.setDate(currentDate.getDate() - 7); // Assuming 7 days for daily timeframe
+                    break;
+                case 'hour':
+                    startDate.setHours(currentDate.getHours() - 24);
+                    break;
+                case 'minute':
+                    startDate.setMinutes(currentDate.getMinutes() - 60);
+                    break;
+                default:
+                    break;
+            }
+
+            // Filter data based on the selected timeframe
+            for (const timestamp in groupedSalesData) {
+                const date = new Date(timestamp);
+                if (date >= startDate) {
+                    if (timeframe === 'hour'){
+                        const formattedDate = this.formatDate(date, 'hour');
+                        filteredData[formattedDate] = (filteredData[formattedDate] || 0) + groupedSalesData[timestamp];
+                        console.log('Filtered Data:', filteredData);
+                    }else if (timeframe === 'minute'){
+                        const formattedDate = this.formatDate(date, 'minute');
+                        filteredData[formattedDate] = (filteredData[formattedDate] || 0) + groupedSalesData[timestamp];
+                        console.log('Filtered Data:', filteredData);
+                    }
+                    else {
+                        const formattedDate = this.formatDateForDaily(date);
+                        filteredData[formattedDate] = (filteredData[formattedDate] || 0) + groupedSalesData[timestamp];
+                        console.log('Filtered Data:', filteredData);
+                    }
+                    
+                }
+            }
+
+            return filteredData;
         },
 
         groupSalesDataByDay(salesData) {
@@ -146,16 +194,34 @@
         },
 
         groupSalesDataByTimeframe(salesData, timeframe) {
-        switch (timeframe) {
-            case 'daily':
-            return this.groupSalesDataByDay(salesData);
-            case 'hour':
-            return this.groupSalesDataByHour(salesData);
-            case 'minute':
-            return this.groupSalesDataByMinute(salesData);
-            default:
-            return {};
-        }
+            const grouped = {};
+
+            salesData.forEach((sale) => {
+                const date = new Date(sale);
+
+                let key;
+                switch (timeframe) {
+                    case 'daily':
+                        key = this.formatDateForDaily(date);
+                        break;
+                    case 'hour':
+                        key = this.formatDate(date, 'hour');
+                        break;
+                    case 'minute':
+                        key = this.formatDate(date, 'minute');
+                        break;
+                    default:
+                        break;
+                }
+
+                if (!grouped[key]) {
+                    grouped[key] = 0;
+                }
+
+                grouped[key]++;
+            });
+
+            return grouped;
         },
 
         updateChartData() {
@@ -166,19 +232,21 @@
 
                 switch (this.selectedTimeframe) {
                     case 'daily':
+                        groupedSalesData = this.filterSalesDataByTimeframe(groupedSalesData, 'day');
                         dataPoints = this.getLastNDaysDataPoints(groupedSalesData, 7);
                         break;
                     case 'hour':
+                        groupedSalesData = this.filterSalesDataByTimeframe(groupedSalesData, 'hour');
                         dataPoints = this.getLastNHoursDataPoints(groupedSalesData, 24);
                         break;
                     case 'minute':
+                        groupedSalesData = this.filterSalesDataByTimeframe(groupedSalesData, 'minute');
                         dataPoints = this.getLastNMinutesDataPoints(groupedSalesData, 60);
                         break;
                     default:
                         dataPoints = [];
                 }
-
-                //console.log('Data Points:', dataPoints);
+                console.log('Data Points:', dataPoints);
             } catch (error) {
                 console.error('Error processing sales data:', error);
                 return;
@@ -204,33 +272,33 @@
         },
 
         updateChart() {
-        if (!this.selectedEvent) return;
+            if (!this.selectedEvent) return;
 
-            const fetchData = async () => {
-                try {
-                const response = await axios.get(`http://127.0.0.1:5000/event-ticket-sales/${this.selectedEvent}`);
-                console.log('Sales Data Response:', response);
-                if (response && response.data) {
-                    this.salesData = response.data.event_ticket_sales;
-                    console.log('Updated sales data:', this.salesData);
-                    this.updateChartData();
+                const fetchData = async () => {
+                    try {
+                    const response = await axios.get(`http://127.0.0.1:5000/event-ticket-sales/${this.selectedEvent}`);
+                    console.log('Sales Data Response:', response);
+                    if (response && response.data) {
+                        this.salesData = response.data.event_ticket_sales;
+                        console.log('Updated sales data:', this.salesData);
+                        this.updateChartData();
+                    }
+                    } catch (error) {
+                    console.error('Error fetching sales data:', error);
+                    }
+                };
+                
+                fetchData();
+                
+
+                if (this.updateChartRealTime) {
+                    this.updateChartRealTime();
                 }
-                } catch (error) {
-                console.error('Error fetching sales data:', error);
-                }
-            };
-            
-            fetchData();
-            
 
-            if (this.updateChartRealTime) {
-                this.updateChartRealTime();
-            }
+            },
 
-        },
-
-        pad(num) {
-        return num.toString().padStart(2, '0');
+            pad(num) {
+            return num.toString().padStart(2, '0');
         },
         
         scheduleRealTimeUpdate: throttle(function () {
@@ -266,27 +334,27 @@
         },
 
         getLastNDaysDataPoints(groupedSalesData, n) {
-        const endOfDay = new Date();
-        const startOfDay = new Date(endOfDay);
-        startOfDay.setDate(endOfDay.getDate() - n);
+            const endOfDay = new Date();
+            const startOfDay = new Date(endOfDay);
+            startOfDay.setDate(endOfDay.getDate() - n);
 
-        return this.generateDataPoints(startOfDay, endOfDay, 'daily', groupedSalesData);
+            return this.generateDataPoints(startOfDay, endOfDay, 'daily', groupedSalesData);
         },
 
         getLastNHoursDataPoints(groupedSalesData, n) {
-        const endOfHour = new Date();
-        const startOfHour = new Date(endOfHour);
-        startOfHour.setHours(endOfHour.getHours() - n);
+            const endOfHour = new Date();
+            const startOfHour = new Date(endOfHour);
+            startOfHour.setHours(endOfHour.getHours() - n);
 
-        return this.generateDataPoints(startOfHour, endOfHour, 'hour', groupedSalesData);
+            return this.generateDataPoints(startOfHour, endOfHour, 'hour', groupedSalesData);
         },
 
         getLastNMinutesDataPoints(groupedSalesData, n) {
-        const endOfMinute = new Date();
-        const startOfMinute = new Date(endOfMinute);
-        startOfMinute.setMinutes(endOfMinute.getMinutes() - n);
+            const endOfMinute = new Date();
+            const startOfMinute = new Date(endOfMinute);
+            startOfMinute.setMinutes(endOfMinute.getMinutes() - n);
 
-        return this.generateDataPoints(startOfMinute, endOfMinute, 'minute', groupedSalesData);
+            return this.generateDataPoints(startOfMinute, endOfMinute, 'minute', groupedSalesData);
         },
 
         generateDataPoints(startDate, endDate, timeframe, groupedSalesData) {
@@ -294,9 +362,18 @@
             let currentDate = new Date(startDate); // Start from the end date
             let cumulativeCount = 0;
 
+            // Fetch total sales count for the event
+            const total = this.selectedEventTotalSales;
+            
+            const totalSalesInTimeframe = Object.values(groupedSalesData).reduce((sum, count) => sum + count, 0);
+            console.log('Total Sales in Timeframe:', totalSalesInTimeframe);
+            // Set initial cumulativeCount to (total - total sales in the selected timeframe)
+            cumulativeCount = total - totalSalesInTimeframe;
+            console.log('Initial Cumulative Count:', cumulativeCount);
+
             while (currentDate <= endDate) {
                 const key = this.formatDate(currentDate, timeframe);
-                
+
                 const count = groupedSalesData[key] || 0;
                 cumulativeCount += count;
 
@@ -312,6 +389,7 @@
         },
 
 
+
         formatDate(date, timeframe) {
             if (!date) {
                 return '';
@@ -321,9 +399,9 @@
                 case 'daily':
                 return this.formatDateForDaily(date);
                 case 'hour':
-                return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':00';
+                return this.formatDateForDaily(date) + ' ' + this.pad(date.getHours()) + ':00';
                 case 'minute':
-                return this.formatDate(date) + ' ' + this.pad(date.getHours()) + ':' + this.pad(date.getMinutes());
+                return this.formatDateForDaily(date) + ' ' + this.pad(date.getHours()) + ':' + this.pad(date.getMinutes());
                 default:
                 return '';
             }
@@ -341,8 +419,6 @@
             const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
             return Intl.DateTimeFormat('en-US', options).format(date);
         },
-
-
 
         decrementDate(date, timeframe) {
         const newDate = new Date(date);
@@ -362,6 +438,6 @@
         return newDate;
         },
     },
-    props: ['events', 'updateChartRealTime'],
+    props: ['events'],
     };
 </script>

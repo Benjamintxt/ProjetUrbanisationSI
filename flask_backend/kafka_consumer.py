@@ -1,58 +1,55 @@
 import json
 from confluent_kafka import Consumer, KafkaError
+import datetime
+
+from app import insert_into_database, app
+
 
 # Kafka configuration for consuming messages
-kafka_consumer_config = {
+kafka_config = {
     'bootstrap.servers': 'localhost:9092',
     'group.id': 'flask-kafka-consumer',
-    'auto.offset.reset': 'earliest'
+    'auto.offset.reset': 'smallest'
 }
 
+app.app_context().push()
+
+consumer = Consumer(kafka_config)
+
 # Kafka consumer
-consumer = Consumer(kafka_consumer_config)
+consumer.subscribe(['webhook_event'])
 
-# Subscribe to Kafka topic
-consumer.subscribe(['webhook_events'])
+try:
+    
 
-def get_kafka_events():
-    try:
-        kafka_events = []
+    # Consume all available messages from the 'webhook_event' topic
+    while True:
+        msg = consumer.poll(1000.0)
 
-        # Consume all available messages from the 'webhook_events' topic
-        while True:
-            msg = consumer.poll(1.0)
+        if msg is None:
+            break
 
-            if msg is None:
+        if msg.error():
+            if msg.error().code() == KafkaError._PARTITION_EOF:
+                continue
+            else:
+                print(msg.error())
                 break
 
-            if msg.error():
-                if msg.error().code() == KafkaError._PARTITION_EOF:
-                    continue
-                else:
-                    print(msg.error())
-                    break
+        try:
+            # Decode JSON data
+            json_data = json.loads(msg.value().decode('utf-8'))
 
-            try:
-                # Decode JSON data
-                json_data = json.loads(msg.value().decode('utf-8'))
+            # Extract eventId
+            event_id = json_data.get('eventId')
+            event_name = json_data.get('event')
 
-                # Extract eventId
-                event_id = json_data.get('eventId')
-                event_name = json_data.get('event')
+            with app.app_context():
+                insert_into_database(event_id, event_name, json_data)
 
-                # Append the event to the list
-                kafka_events.append({'eventId': event_id, 'event': event_name, 'data': json_data})
+        except json.JSONDecodeError as e:
+            print(f"Error decoding JSON: {e}")
 
-            except json.JSONDecodeError as e:
-                print(f"Error decoding JSON: {e}")
-
-        return kafka_events
-
-    except Exception as e:
-        print(f'Error fetching Kafka events: {str(e)}')
-        return []
-
-if __name__ == '__main__':
-    
-    kafka_events = get_kafka_events()
-    print("Kafka events:", kafka_events)
+finally:
+    # Close down consumer to commit final offsets.
+    consumer.close()

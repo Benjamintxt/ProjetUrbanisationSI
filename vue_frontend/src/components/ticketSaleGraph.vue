@@ -50,19 +50,20 @@
         selectedEventTotalSales: 0,
         };
     },
+    
     created() {
         this.socket = io('http://127.0.0.1:5000/');
 
-        this.socket.on('webhook_events', (data) => {
-            console.log('Received event:', data);
-            this.chart.render();
-            /*if (this.updateChartRealTime) {
-                this.updateChartRealTime();
-            }*/
-            this.fetchEventSalesCount();
-            //this.updateChartData();
-            this.updateChart();
+        this.socket.on('connect', () => {
+            console.log('Connected to WebSocket');
         });
+
+        this.socket.on('ticket_created', (data) => {
+            console.log('Received new created ticket :', data);
+            this.scheduleRealTimeUpdate();
+            
+        });
+
         this.fetchEventSalesCount();
     },
     beforeUnmount() {
@@ -85,6 +86,7 @@
 
         chartInstance(chart) {
         this.chart = chart;
+        this.updateChart();
         },
 
         async fetchEventSalesCount() {
@@ -256,7 +258,6 @@
                 {
                     type: 'line',
                     xValueFormatString: this.getXValueFormatString(),
-                    yValueFormatString: '0,0',
                     markerSize: 0,
                     dataPoints,
                 },
@@ -273,28 +274,24 @@
 
         updateChart() {
             if (!this.selectedEvent) return;
-
+                
                 const fetchData = async () => {
                     try {
-                    const response = await axios.get(`http://127.0.0.1:5000/event-ticket-sales/${this.selectedEvent}`);
-                    console.log('Sales Data Response:', response);
-                    if (response && response.data) {
-                        this.salesData = response.data.event_ticket_sales;
-                        console.log('Updated sales data:', this.salesData);
+                        const initialDataResponse = await axios.get(`http://127.0.0.1:5000/event-ticket-sales/${this.selectedEvent}`);
+                        this.salesData = initialDataResponse.data.event_ticket_sales;
+
+                        this.socket.send(JSON.stringify({ event_id: this.selectedEvent }));
+
                         this.updateChartData();
-                    }
                     } catch (error) {
-                    console.error('Error fetching sales data:', error);
+                        console.error('Error fetching sales data:', error);
                     }
                 };
-                
+
+                  
                 fetchData();
                 
-
-                if (this.updateChartRealTime) {
-                    this.updateChartRealTime();
-                }
-
+                
             },
 
             pad(num) {
@@ -309,14 +306,18 @@
             setTimeout(() => {
                 // Check if a real-time update is pending
                 if (this.realTimeUpdatePending) {
-                // Perform the real-time update
-                this.updateChartRealTime();
+            
+                    //this.updateChart();
+                    this.chart.render();
+                    setTimeout(this.updateChart, 1000);     
+
+                    this.fetchEventSalesCount();
 
                 // Reset the flag
                 this.realTimeUpdatePending = false;
                 }
             }, 1000); // Adjust the timeout as needed
-            }, 2000), // Adjust the throttle duration as needed
+            }, 1000), // Adjust the throttle duration as needed
 
 
 

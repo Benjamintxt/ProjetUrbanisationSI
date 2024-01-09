@@ -4,7 +4,6 @@ from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
 from confluent_kafka import Producer
 from flask_socketio import SocketIO
-from kafka_consumer import get_kafka_events
 import hmac
 import datetime
 
@@ -22,9 +21,10 @@ kafka_config = {
     'client.id': 'flask-kafka-producer'
 }
 
+create_app = app
 # Create Kafka producer
 producer = Producer(kafka_config)
-
+ 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///events.db'
 db = SQLAlchemy(app)
 
@@ -40,6 +40,47 @@ class Ticket(db.Model):
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(datetime.timezone.utc))  # Updated timestamp field
     data = db.Column(db.JSON, nullable=False)
 
+
+def insert_into_database(event_id, event_name, json_data):
+    print("Inserting data into database method", json_data)
+    try:
+        """
+        event_id = json_data.get('details', {}).get('ticket', {}).get('eventId')
+        print(event_id)
+        event_name = json_data.get('details', {}).get('ticket', {}).get('event')
+        print(event_name)
+        # Save event to the database
+        """
+        existing_event = Event.query.filter_by(eventId=event_id).first()
+
+        if not existing_event:
+            new_event = Event(eventId=event_id, eventName=event_name)
+            db.session.add(new_event)
+            db.session.commit()
+        
+        # Check if json_data is a string
+        if isinstance(json_data, str):
+            # Convert JSON string back to dictionary
+            json_data_dict = json.loads(json_data)
+        else:
+            json_data_dict = json_data
+
+        existing_ticket = Ticket.query.get(json_data_dict['data']['details']['ticket']['number'])
+
+        # If the ticket doesn't exist, create a new one and associate it with the existing or newly created event
+        if not existing_ticket:
+            new_ticket = Ticket(
+                id=json_data_dict['data']['details']['ticket']['number'],
+                eventId=event_id,
+                timestamp=datetime.datetime.utcnow()
+                         + datetime.timedelta(hours=1),
+                data=json_data_dict
+            )
+            db.session.add(new_ticket)
+            db.session.commit()
+
+    except Exception as e:
+        print(f"Error inserting data into database: {str(e)}")
 
 def validate_signature(request):
     try:
@@ -68,6 +109,7 @@ def validate_signature(request):
     except Exception as e:
         raise ValueError(f"Signature validation failed: {str(e)}")
 
+
 @app.route('/webhook', methods=['POST'])
 def webhook_handler():
     try:
@@ -80,35 +122,17 @@ def webhook_handler():
         event_id = json_data.get('details', {}).get('ticket', {}).get('eventId')
         event_name = json_data.get('details', {}).get('ticket', {}).get('event')
 
-        # Save event to the database
-        existing_event = Event.query.filter_by(eventId=event_id).first()
-
-        if not existing_event:
-            new_event = Event(eventId=event_id, eventName=event_name)
-            db.session.add(new_event)
-            db.session.commit()
-        
-        existing_ticket = Ticket.query.get(json_data['details']['ticket']['number'])
-
-        # If the ticket doesn't exist, create a new one and associate it with the existing or newly created event
-        if not existing_ticket:
-            new_ticket = Ticket(
-                id=json_data['details']['ticket']['number'],
-                eventId=event_id,
-                timestamp=datetime.datetime.utcnow()
-                         + datetime.timedelta(hours=1),
-                data=json_data
-            )
-            db.session.add(new_ticket)
-            db.session.commit()
-
         # Send relevant data, including eventId, to Kafka
-        producer.produce('webhook_events', json.dumps({'eventId': event_id, 'event': event_name, 'data': json_data}))
+        # producer.produce('webhook_events', json.dumps({'eventId': event_id, 'event': event_name, 'data': json_data}))
+            
+        kafka_events = {'eventId': event_id, 'event': event_name, 'data': json_data}
+        producer.produce('webhook_event', json.dumps(kafka_events))
+
 
         # Emit the event to Socket.IO clients
-        socketio.emit('webhook_events', {'eventId': event_id, 'event': event_name, 'data': json_data})
+        socketio.emit('ticket_created', {'eventId': event_id, 'ticketData': json_data})
 
-        return jsonify({'message': 'Webhook data saved and sent to Kafka successfully'}), 200
+        return jsonify({'message': 'Good'}), 200
 
     except ValueError as e:
         return jsonify({'error': str(e)}), 401

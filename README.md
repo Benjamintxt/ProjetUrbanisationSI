@@ -1,7 +1,8 @@
 # Simulateur de Webhook Petzi
 
-Projet dans le cadre du cours "Urbanisation des SI" à la haute école d'arc de gestion, Neucâtel. Ce projet utilise un simulateur de Webhook Petzi afin de simuler l'achat d'un billet 
-et d'envoyer une requête de webhook à un serveur Flask puis de persister grâce à SQLite. 
+Projet dans le cadre du cours "Urbanisation des SI" à la haute école d'arc de gestion, Neuchâtel (2023-2024). Ce projet utilise un simulateur de Webhook Petzi afin de simuler l'achat d'un billet 
+et d'envoyer une requête de webhook POST à un serveur Flask -> emettre un message de 'création de ticket' via websocket au dashboard, produce message à kafka avec le topic 'webhook_event', kafka_consumer consume 
+le topic pour enfin persister les données grâce à SQLite.
 Le projet comprend un backend Flask, un message broker Kafka et une interface utilisateur Vue.js pour la visualisation en temps réel des données (websocket).
 
 ## Utilisation
@@ -13,7 +14,7 @@ Exécutez le simulateur de webhook Petzi avec la commande suivante :
 ```bash
 python petzi_simulator.py http://127.0.0.1:5000/webhook GoofyKey
 ```
-Cette commande simule l'achat d'un billet et envoie une requête de webhook simulée au serveur Flask spécifié.
+Cette commande simule l'achat d'un billet et envoie une requête de webhook simulée au serveur Flask spécifié (à executer quand le backend est exécuté)
 
 ### 2. Exécuter avec Docker
 
@@ -23,7 +24,7 @@ Utilisez Docker pour configurer facilement le projet avec le fichier docker-comp
 docker-compose -f docker-compose.yml up -d
 ```
 
-Cette commande démarrera le backend Flask, le message Broker Kafka et d'autres composants nécessaires.
+Cette commande démarrera les containers pour le message Broker Kafka et d'autres composants nécessaires.
 
 ### 3. Exécuter le Backend
 
@@ -33,7 +34,7 @@ Exécutez le backend Flask en exécutant la commande suivante dans le répertoir
 python app.py
 ```
 
-Cette commande démarre le serveur Flask, qui écoute les événements de webhook entrants, valide les signatures et envoie des données à Kafka.
+Cette commande démarre le serveur Flask, qui écoute les événements de webhook entrants à l'endpoint '/webhook' 
 
 ### 4. Exécuter le Frontend
 
@@ -48,9 +49,9 @@ Cette commande installe les dépendances et démarre le serveur de développemen
 
 ## Composants
 
-Backend Flask : Écoute les événements de webhook entrants, valide les signatures et envoie des données à Kafka.
+Backend Flask : Écoute les événements de webhook entrants à l'endpoint '/webhook', valide les signatures, informe le front-end (via websocket) et le producer kafka.
 
-Message Broker Kafka : Stocke et distribue des événements entre les composants.
+Message Broker Kafka : Stocke et distribue des événements entre les composants | Producer kafka (topic 'webhook_event') et consumer kafka (consume le topic 'webhook_event').
 
 Frontend Vue.js : Fournit une visualisation en temps réel des ventes de billets à l'aide de connexions WebSocket.
 

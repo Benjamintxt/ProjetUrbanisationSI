@@ -20,7 +20,7 @@ Cette commande simule l'achat d'un billet et envoie une requête de webhook simu
 Utilisez Docker pour configurer facilement le projet avec le fichier docker-compose.yml fourni. Assurez-vous que Docker est installé sur votre machine.
 
 ```bash
-docker-compose up
+docker-compose -f docker-compose.yml up -d
 ```
 
 Cette commande démarrera le backend Flask, le message Broker Kafka et d'autres composants nécessaires.

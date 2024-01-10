@@ -2,10 +2,11 @@ from flask_sqlalchemy import SQLAlchemy
 import json
 from flask import Flask, request, jsonify, current_app
 from flask_cors import CORS
-from confluent_kafka import Producer
 from flask_socketio import SocketIO
 import hmac
 import datetime
+
+from kafka_producer import produce_to_kafka
 
 
 app = Flask(__name__)
@@ -15,15 +16,8 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Replace with your actual secret
 secret = b"GoofyKey"
 
-# Kafka configuration
-kafka_config = {
-    'bootstrap.servers': 'localhost:9092',
-    'client.id': 'flask-kafka-producer'
-}
-
 create_app = app
-# Create Kafka producer
-producer = Producer(kafka_config)
+
  
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///events.db'
 db = SQLAlchemy(app)
@@ -121,16 +115,12 @@ def webhook_handler():
 
         event_id = json_data.get('details', {}).get('ticket', {}).get('eventId')
         event_name = json_data.get('details', {}).get('ticket', {}).get('event')
-
-        # Send relevant data, including eventId, to Kafka
-        # producer.produce('webhook_events', json.dumps({'eventId': event_id, 'event': event_name, 'data': json_data}))
-            
-        kafka_events = {'eventId': event_id, 'event': event_name, 'data': json_data}
-        producer.produce('webhook_event', json.dumps(kafka_events))
-
+        ticketnumber = json_data.get('details', {}).get('ticket', {}).get('number')
 
         # Emit the event to Socket.IO clients
-        socketio.emit('ticket_created', {'eventId': event_id, 'ticketData': json_data})
+        socketio.emit('ticket_created', {'eventId': event_id, 'event': event_name, 'ticketnumber': ticketnumber})
+
+        produce_to_kafka(event_id, event_name, json_data)
 
         return jsonify({'message': 'Good'}), 200
 

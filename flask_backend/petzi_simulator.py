@@ -48,7 +48,7 @@ if __name__ == "__main__":
        "event":"ticket_created",
        "details":{
           "ticket":{
-             "number":"LXEA8MMU1NL9MB",
+             "number":"LXEA7MMU9NO9MB",
              "type":"online_presale",
              "title":"My Parent Ticket",
              "category":"My Category",

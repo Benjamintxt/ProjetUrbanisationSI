@@ -19,10 +19,7 @@ consumer = Consumer(kafka_config)
 # Kafka consumer
 consumer.subscribe(['webhook_event'])
 
-try:
-    
-
-    # Consume all available messages from the 'webhook_event' topic
+def consume_from_kafka():
     while True:
         msg = consumer.poll(1000.0)
 
@@ -50,6 +47,7 @@ try:
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
 
-finally:
-    # Close down consumer to commit final offsets.
-    consumer.close()
+# Start Kafka consumer in a separate thread
+import threading
+kafka_consumer_thread = threading.Thread(target=consume_from_kafka)
+kafka_consumer_thread.start()

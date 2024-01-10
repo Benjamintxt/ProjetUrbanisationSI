@@ -72,19 +72,6 @@ export default {
         console.error('Error fetching event sales count:', error);
       }
     },
-    async fetchAllEvents() {
-      try {
-        const response = await this.axios.get('http://127.0.0.1:5000/events');
-        console.log('All Events Response:', response);
-        if (response && response.data) {
-          this.allEvents = response.data.events;
-        } else {
-          console.error('Invalid all events response structure:', response);
-        }
-      } catch (error) {
-        console.error('Error fetching all events:', error);
-      }
-    },
     handleSelectedEventChange(eventId) {
       this.selectedEvent = eventId;
       this.fetchEventSalesCount(eventId);

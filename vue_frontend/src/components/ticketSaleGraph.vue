@@ -104,14 +104,12 @@
 
         filterSalesDataByTimeframe(groupedSalesData, timeframe) {
             const filteredData = {};
-
             const currentDate = new Date();
             const startDate = new Date(currentDate);
 
-            // Adjust startDate based on the selected timeframe
             switch (timeframe) {
                 case 'day':
-                    startDate.setDate(currentDate.getDate() - 7); // Assuming 7 days for daily timeframe
+                    startDate.setDate(currentDate.getDate() - 7);
                     break;
                 case 'hour':
                     startDate.setHours(currentDate.getHours() - 24);
@@ -141,10 +139,8 @@
                         filteredData[formattedDate] = (filteredData[formattedDate] || 0) + groupedSalesData[timestamp];
                         console.log('Filtered Data:', filteredData);
                     }
-                    
                 }
             }
-
             return filteredData;
         },
 
@@ -165,7 +161,6 @@
 
             return grouped;
         },
-
 
         groupSalesDataByHour(salesData) {
             const grouped = {};
@@ -288,10 +283,7 @@
                     }
                 };
 
-                  
                 fetchData();
-                
-                
             },
 
             pad(num) {
@@ -304,22 +296,17 @@
 
             // Use a timeout to allow some time for additional events to be received
             setTimeout(() => {
-                // Check if a real-time update is pending
                 if (this.realTimeUpdatePending) {
-            
-                    //this.updateChart();
+
                     this.chart.render();
                     setTimeout(this.updateChart, 1000);     
-
                     this.fetchEventSalesCount();
 
                 // Reset the flag
                 this.realTimeUpdatePending = false;
                 }
-            }, 1000); // Adjust the timeout as needed
-            }, 1000), // Adjust the throttle duration as needed
-
-
+            }, 1000);
+            }, 1000),
 
         getXValueFormatString() {
             switch (this.selectedTimeframe) {
@@ -360,21 +347,18 @@
 
         generateDataPoints(startDate, endDate, timeframe, groupedSalesData) {
             const dataPoints = [];
-            let currentDate = new Date(startDate); // Start from the end date
+            let currentDate = new Date(startDate);
             let cumulativeCount = 0;
-
-            // Fetch total sales count for the event
             const total = this.selectedEventTotalSales;
             
             const totalSalesInTimeframe = Object.values(groupedSalesData).reduce((sum, count) => sum + count, 0);
-            console.log('Total Sales in Timeframe:', totalSalesInTimeframe);
-            // Set initial cumulativeCount to (total - total sales in the selected timeframe)
+
+            //console.log('Total Sales in Timeframe:', totalSalesInTimeframe);
             cumulativeCount = total - totalSalesInTimeframe;
-            console.log('Initial Cumulative Count:', cumulativeCount);
+            //console.log('Initial Cumulative Count:', cumulativeCount);
 
             while (currentDate <= endDate) {
                 const key = this.formatDate(currentDate, timeframe);
-
                 const count = groupedSalesData[key] || 0;
                 cumulativeCount += count;
 
@@ -388,8 +372,6 @@
 
             return dataPoints.reverse(); // Reverse the order to display in ascending order
         },
-
-
 
         formatDate(date, timeframe) {
             if (!date) {

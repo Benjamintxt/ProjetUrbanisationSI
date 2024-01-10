@@ -34,7 +34,15 @@ Exécutez le backend Flask en exécutant la commande suivante dans le répertoir
 python app.py
 ```
 
-Cette commande démarre le serveur Flask, qui écoute les événements de webhook entrants à l'endpoint '/webhook' 
+Cette commande démarre le serveur Flask, qui écoute les événements de webhook entrants à l'endpoint '/webhook'
+
+### 4. Exécuter le consumer kafka
+
+```bash
+python kafka_consumer.py
+```
+
+Cette commande démarre le consumer kafka qui s'abonne au topic 'webhook_event'
 
 ### 4. Exécuter le Frontend
 

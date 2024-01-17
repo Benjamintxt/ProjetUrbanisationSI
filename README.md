@@ -7,14 +7,11 @@ Le projet comprend un backend Flask, un message broker Kafka et une interface ut
 
 ## Utilisation
 
-### 1. Simuler des événements de webhook
-
-Exécutez le simulateur de webhook Petzi avec la commande suivante :
+### 1. Installation dépendances
 
 ```bash
-python petzi_simulator.py http://127.0.0.1:5000/webhook GoofyKey
+pip install -r requirements.txt
 ```
-Cette commande simule l'achat d'un billet et envoie une requête de webhook simulée au serveur Flask spécifié (à executer quand le backend est exécuté)
 
 ### 2. Exécuter avec Docker
 
@@ -44,12 +41,23 @@ python kafka_consumer.py
 
 Cette commande démarre le consumer kafka qui s'abonne au topic 'webhook_event'
 
-### 4. Exécuter le Frontend
+### 5. Simuler des événements de webhook
+
+Exécutez le simulateur de webhook Petzi avec la commande suivante :
+
+```bash
+python petzi_simulator.py http://127.0.0.1:5000/webhook GoofyKey
+```
+Cette commande simule l'achat d'un billet et envoie une requête de webhook simulée au serveur Flask spécifié (à executer quand le backend est exécuté)
+
+### 6. Exécuter le Frontend
 
 Accédez au répertoire vue_frontend et exécutez l'interface utilisateur Vue.js avec les commandes suivantes :
 
 ```bash
 npm install  # Installer les dépendances (uniquement nécessaire la première fois)
+npm install vue-axios
+npm install @canvasjs/vue-charts
 npm run dev   # Démarrer le serveur de développement
 ```
 
